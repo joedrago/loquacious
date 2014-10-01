@@ -1,0 +1,33 @@
+{
+  "name": "loquacious",
+  "description": "You want comments? I'll give you comments.",
+  "keywords": [
+    "language",
+    "comments"
+  ],
+  "author": "Joe Drago",
+  "version": "0.0.1",
+  "license": "Boost",
+  "engines": {
+    "node": ">=0.8.0"
+  },
+  "bin": {
+    "loquacious": "./bin/loquacious"
+  },
+  "homepage": "https://github.com/joedrago/loquacious",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/joedrago/loquacious.git"
+  },
+  "scripts": {
+    "build": "coffee -o js -c src",
+    "watch": "coffee -w -o js -c src"
+  },
+  "devDependencies": {
+    "esprima": "*",
+    "coffee-script": "*"
+  },
+  "dependencies": {
+    "minimist": "*"
+  }
+}
