@@ -144,8 +144,8 @@
             indentText += ' ';
           }
           outputLine += indentText + "// This is a pretty sweet comment.\n";
-          outputLine += indentText + "   |\n";
-          outputLine += indentText + "   \\/\n";
+          outputLine += indentText + "// |\n";
+          outputLine += indentText + "// \\/\n";
         }
         outputLine += line + "\n";
         this.output += outputLine;

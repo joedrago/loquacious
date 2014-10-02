@@ -99,8 +99,8 @@ class Loquacious
         for i in [0...comment.loc.start.column]
           indentText += ' '
         outputLine += indentText + "// This is a pretty sweet comment.\n"
-        outputLine += indentText + "   |\n"
-        outputLine += indentText + "   \\/\n"
+        outputLine += indentText + "// |\n"
+        outputLine += indentText + "// \\/\n"
 
       outputLine += line + "\n"
       @output += outputLine
