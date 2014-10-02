@@ -95,12 +95,25 @@
       return "";
     };
 
+    Loquacious.prototype.findComments = function(list, lineNo) {
+      var comment, comments, _i, _len;
+      comments = [];
+      for (_i = 0, _len = list.length; _i < _len; _i++) {
+        comment = list[_i];
+        if (comment.loc.start.line === lineNo) {
+          comments.push(comment);
+        }
+      }
+      return comments;
+    };
+
     Loquacious.prototype.parse = function() {
-      var ast, explain, explains, expr, exprs, indent, line, lineNo, outputLine, _i, _j, _k, _len, _len1, _len2, _ref;
+      var ast, comment, comments, explain, explains, expr, exprs, i, indent, indentText, line, lineNo, outputLine, _i, _j, _k, _l, _len, _len1, _len2, _len3, _m, _ref, _ref1;
       this.inputJS = String(fs.readFileSync(this.inputFilename));
       this.inputLines = this.inputJS.split(/\r\n|\n|\r/);
       ast = esprima.parse(this.inputJS, {
-        loc: true
+        loc: true,
+        comment: true
       });
       if ((ast === null) || (ast.body.length < 1)) {
         return false;
@@ -111,9 +124,9 @@
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         line = _ref[_i];
         lineNo++;
-        exprs = this.findExprs(ast.body, lineNo);
-        indent = this.getIndent(line);
         outputLine = "";
+        indent = this.getIndent(line);
+        exprs = this.findExprs(ast.body, lineNo);
         for (_j = 0, _len1 = exprs.length; _j < _len1; _j++) {
           expr = exprs[_j];
           explains = this.explainExpr(expr);
@@ -122,6 +135,17 @@
             outputLine += indent + "// ";
             outputLine += this.explainExpr(expr) + "\n";
           }
+        }
+        comments = this.findComments(ast.comments, lineNo);
+        for (_l = 0, _len3 = comments.length; _l < _len3; _l++) {
+          comment = comments[_l];
+          indentText = '';
+          for (i = _m = 0, _ref1 = comment.loc.start.column; 0 <= _ref1 ? _m < _ref1 : _m > _ref1; i = 0 <= _ref1 ? ++_m : --_m) {
+            indentText += ' ';
+          }
+          outputLine += indentText + "// This is a pretty sweet comment.\n";
+          outputLine += indentText + "   |\n";
+          outputLine += indentText + "   \\/\n";
         }
         outputLine += line + "\n";
         this.output += outputLine;

@@ -61,10 +61,17 @@ class Loquacious
       return matches[1]
     return ""
 
+  findComments: (list, lineNo) ->
+    comments = []
+    for comment in list
+      if comment.loc.start.line == lineNo
+        comments.push comment
+    return comments
+
   parse: ->
     @inputJS = String(fs.readFileSync(@inputFilename))
     @inputLines = @inputJS.split(/\r\n|\n|\r/)
-    ast = esprima.parse(@inputJS, { loc: true })
+    ast = esprima.parse(@inputJS, { loc: true, comment: true })
     if (ast == null) or (ast.body.length < 1)
       return false
 
@@ -76,16 +83,26 @@ class Loquacious
     lineNo = 0
     for line in @inputLines
       lineNo++
-      exprs = @findExprs(ast.body, lineNo)
-      indent = @getIndent(line)
       outputLine = ""
+      indent = @getIndent(line)
+
+      exprs = @findExprs(ast.body, lineNo)
       for expr in exprs
         explains = @explainExpr(expr)
         for explain in explains
           outputLine += indent + "// "
           outputLine += @explainExpr(expr) + "\n"
-      outputLine += line + "\n"
 
+      comments = @findComments(ast.comments, lineNo)
+      for comment in comments
+        indentText = ''
+        for i in [0...comment.loc.start.column]
+          indentText += ' '
+        outputLine += indentText + "// This is a pretty sweet comment.\n"
+        outputLine += indentText + "   |\n"
+        outputLine += indentText + "   \\/\n"
+
+      outputLine += line + "\n"
       @output += outputLine
 
     return true
