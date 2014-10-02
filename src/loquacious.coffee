@@ -8,17 +8,52 @@ esprima = require 'esprima'
 class Loquacious
   constructor: (@inputFilename) ->
 
-  findExprs: (ast, lineNo) ->
+  findExprs: (list, lineNo) ->
     exprs = []
-    for expr in ast.body
+    for expr in list
       if expr.loc.start.line == lineNo
         exprs.push expr
       if expr.type == 'FunctionDeclaration'
+        exprs = exprs.concat @findExprs(expr.body.body, lineNo)
+      if expr.type == 'ExpressionStatement'
+        exprs = exprs.concat @findExprs([expr.expression], lineNo)
+      if expr.type == 'CallExpression'
+        exprs = exprs.concat @findExprs(expr.arguments, lineNo)
+      if expr.type == 'FunctionExpression'
+        exprs = exprs.concat @findExprs(expr.params, lineNo)
+        exprs = exprs.concat @findExprs([expr.body], lineNo)
+      if expr.type == 'BlockStatement'
         exprs = exprs.concat @findExprs(expr.body, lineNo)
+      if expr.type == 'IfStatement'
+        exprs = exprs.concat @findExprs([expr.test], lineNo)
+        exprs = exprs.concat @findExprs([expr.consequent], lineNo)
     return exprs
 
   explainExpr: (expr) ->
-    return "lel #{expr.type}"
+    switch expr.type
+      when 'ExpressionStatement', 'Identifier', 'Literal', 'FunctionExpression', 'BlockStatement', 'MemberExpression', 'UnaryExpression', 'BinaryExpression', 'NewExpression'
+        []
+      when 'AssignmentExpression'
+        ["Assign some stuff."]
+      when 'CallExpression'
+        ["Call a function."]
+      when 'IfStatement'
+        ["Check a value."]
+      when 'ReturnStatement'
+        ["Return a value."]
+      when 'FunctionDeclaration'
+        ["Declare the function #{expr.id.name}()."]
+      when 'VariableDeclaration'
+        if expr.declarations.length > 1
+          names = []
+          for decl in expr.declarations
+            names.push decl.id.name
+          names = names.join(", ")
+          ["Declare some variables: #{names}"]
+        else
+          name = expr.declarations[0].id.name
+          ["Declare the variable '#{name}'."]
+      else ["lel #{expr.type}"]
 
   getIndent: (line) ->
     matches = line.match(/^(\s*)/)
@@ -41,12 +76,14 @@ class Loquacious
     lineNo = 0
     for line in @inputLines
       lineNo++
-      exprs = @findExprs(ast, lineNo)
+      exprs = @findExprs(ast.body, lineNo)
       indent = @getIndent(line)
       outputLine = ""
       for expr in exprs
-        outputLine += indent + "// "
-        outputLine += @explainExpr(expr) + "\n"
+        explains = @explainExpr(expr)
+        for explain in explains
+          outputLine += indent + "// "
+          outputLine += @explainExpr(expr) + "\n"
       outputLine += line + "\n"
 
       @output += outputLine

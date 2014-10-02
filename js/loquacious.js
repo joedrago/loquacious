@@ -11,24 +11,79 @@
       this.inputFilename = inputFilename;
     }
 
-    Loquacious.prototype.findExprs = function(ast, lineNo) {
-      var expr, exprs, _i, _len, _ref;
+    Loquacious.prototype.findExprs = function(list, lineNo) {
+      var expr, exprs, _i, _len;
       exprs = [];
-      _ref = ast.body;
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        expr = _ref[_i];
+      for (_i = 0, _len = list.length; _i < _len; _i++) {
+        expr = list[_i];
         if (expr.loc.start.line === lineNo) {
           exprs.push(expr);
         }
         if (expr.type === 'FunctionDeclaration') {
+          exprs = exprs.concat(this.findExprs(expr.body.body, lineNo));
+        }
+        if (expr.type === 'ExpressionStatement') {
+          exprs = exprs.concat(this.findExprs([expr.expression], lineNo));
+        }
+        if (expr.type === 'CallExpression') {
+          exprs = exprs.concat(this.findExprs(expr["arguments"], lineNo));
+        }
+        if (expr.type === 'FunctionExpression') {
+          exprs = exprs.concat(this.findExprs(expr.params, lineNo));
+          exprs = exprs.concat(this.findExprs([expr.body], lineNo));
+        }
+        if (expr.type === 'BlockStatement') {
           exprs = exprs.concat(this.findExprs(expr.body, lineNo));
+        }
+        if (expr.type === 'IfStatement') {
+          exprs = exprs.concat(this.findExprs([expr.test], lineNo));
+          exprs = exprs.concat(this.findExprs([expr.consequent], lineNo));
         }
       }
       return exprs;
     };
 
     Loquacious.prototype.explainExpr = function(expr) {
-      return "lel " + expr.type;
+      var decl, name, names, _i, _len, _ref;
+      switch (expr.type) {
+        case 'ExpressionStatement':
+        case 'Identifier':
+        case 'Literal':
+        case 'FunctionExpression':
+        case 'BlockStatement':
+        case 'MemberExpression':
+        case 'UnaryExpression':
+        case 'BinaryExpression':
+        case 'NewExpression':
+          return [];
+        case 'AssignmentExpression':
+          return ["Assign some stuff."];
+        case 'CallExpression':
+          return ["Call a function."];
+        case 'IfStatement':
+          return ["Check a value."];
+        case 'ReturnStatement':
+          return ["Return a value."];
+        case 'FunctionDeclaration':
+          return ["Declare the function " + expr.id.name + "()."];
+        case 'VariableDeclaration':
+          if (expr.declarations.length > 1) {
+            names = [];
+            _ref = expr.declarations;
+            for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+              decl = _ref[_i];
+              names.push(decl.id.name);
+            }
+            names = names.join(", ");
+            return ["Declare some variables: " + names];
+          } else {
+            name = expr.declarations[0].id.name;
+            return ["Declare the variable '" + name + "'."];
+          }
+          break;
+        default:
+          return ["lel " + expr.type];
+      }
     };
 
     Loquacious.prototype.getIndent = function(line) {
@@ -41,7 +96,7 @@
     };
 
     Loquacious.prototype.parse = function() {
-      var ast, expr, exprs, indent, line, lineNo, outputLine, _i, _j, _len, _len1, _ref;
+      var ast, explain, explains, expr, exprs, indent, line, lineNo, outputLine, _i, _j, _k, _len, _len1, _len2, _ref;
       this.inputJS = String(fs.readFileSync(this.inputFilename));
       this.inputLines = this.inputJS.split(/\r\n|\n|\r/);
       ast = esprima.parse(this.inputJS, {
@@ -56,13 +111,17 @@
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         line = _ref[_i];
         lineNo++;
-        exprs = this.findExprs(ast, lineNo);
+        exprs = this.findExprs(ast.body, lineNo);
         indent = this.getIndent(line);
         outputLine = "";
         for (_j = 0, _len1 = exprs.length; _j < _len1; _j++) {
           expr = exprs[_j];
-          outputLine += indent + "// ";
-          outputLine += this.explainExpr(expr) + "\n";
+          explains = this.explainExpr(expr);
+          for (_k = 0, _len2 = explains.length; _k < _len2; _k++) {
+            explain = explains[_k];
+            outputLine += indent + "// ";
+            outputLine += this.explainExpr(expr) + "\n";
+          }
         }
         outputLine += line + "\n";
         this.output += outputLine;
